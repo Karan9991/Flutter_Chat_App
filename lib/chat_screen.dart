@@ -1,131 +1,10 @@
-// import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-
-// class ChatScreen extends StatefulWidget {
-//   final String senderId;
-//   final String receiverId;
-
-//   ChatScreen({required this.senderId, required this.receiverId});
-
-//   @override
-//   _ChatScreenState createState() => _ChatScreenState();
-// }
-
-// class _ChatScreenState extends State<ChatScreen> {
-//   late TextEditingController _messageController;
-//   late CollectionReference _messagesCollection;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _messageController = TextEditingController();
-//     _messagesCollection = FirebaseFirestore.instance.collection('messages');
-//   }
-
-//   void _sendMessage(String message) {
-//     _messagesCollection.add({
-//       'senderId': widget.senderId,
-//       'receiverId': widget.receiverId,
-//       'timestamp': Timestamp.now(),
-//       'message': message,
-//     });
-
-//     _messageController.clear();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Chat Screen'),
-//       ),
-//       body: Column(
-//         children: [
-//           Expanded(
-//             child: StreamBuilder<QuerySnapshot>(
-//   stream: _messagesCollection
-//     .where('senderId', isEqualTo: widget.senderId)
-//     .where('receiverId', isEqualTo: widget.receiverId)
-//     .orderBy('timestamp', descending: true)
-//     .snapshots(),
-//   builder: (context, snapshot) {
-//     if (!snapshot.hasData) {
-//       return Center(
-//         child: CircularProgressIndicator(),
-//       );
-//     }
-
-//     final senderMessages = snapshot.data!.docs;
-
-//     return StreamBuilder<QuerySnapshot>(
-//       stream: _messagesCollection
-//         .where('senderId', isEqualTo: widget.receiverId)
-//         .where('receiverId', isEqualTo: widget.senderId)
-//         .orderBy('timestamp', descending: true)
-//         .snapshots(),
-//       builder: (context, snapshot) {
-//         if (!snapshot.hasData) {
-//           return Center(
-//             child: CircularProgressIndicator(),
-//           );
-//         }
-
-//         final receiverMessages = snapshot.data!.docs;
-//         final allMessages = [...senderMessages, ...receiverMessages];
-//         allMessages.sort(
-//           (a, b) => a['timestamp'].compareTo(b['timestamp']),
-//         );
-
-//         return ListView.builder(
-//           reverse: true,
-//           itemCount: allMessages.length,
-//           itemBuilder: (context, index) {
-//             final message = allMessages[index];
-//             final messageText = message['message'] ?? '';
-
-//             return ListTile(
-//               title: Text(messageText),
-//               subtitle: Text(message['timestamp'].toString()),
-//               trailing: Text(message['senderId']),
-//             );
-//           },
-//         );
-//       },
-//     );
-//   },
-// ),
-
-//           ),
-//           Padding(
-//             padding: const EdgeInsets.all(8.0),
-//             child: Row(
-//               children: [
-//                 Expanded(
-//                   child: TextField(
-//                     controller: _messageController,
-//                     decoration: InputDecoration(
-//                       hintText: 'Type a message',
-//                     ),
-//                   ),
-//                 ),
-//                 IconButton(
-//                   icon: Icon(Icons.send),
-//                   onPressed: () {
-//                     _sendMessage(_messageController.text.trim());
-//                   },
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class ChatMessage {
   final String id;
@@ -146,6 +25,8 @@ class ChatMessage {
 class ChatController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   final RxList<ChatMessage> _messages = <ChatMessage>[].obs;
 
@@ -155,7 +36,7 @@ class ChatController extends GetxController {
   void onInit() {
     super.onInit();
     _subscribeToChat();
-    _configureFCM();
+    //   _configureFCM();
     print('iiiiiiiiinit');
   }
 
@@ -184,13 +65,36 @@ class ChatController extends GetxController {
   void _configureFCM() {
     _firebaseMessaging.requestPermission();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("fffffffffffforeground notifications");
+      print('fffffffffForeground notification received');
       // Handle foreground notifications here
+      // Example: Show a local notification using flutter_local_notifications package
+      _showLocalNotification(message.data);
     });
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('bbbbbbbbbbbBackground notification received');
       // Handle background notifications here
-      print("bbbbbbbbbbbbbackground notifications");
     });
+  }
+
+  void _showLocalNotification(Map<String, dynamic> data) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'channel_id',
+      'channel_name',
+      channelDescription: 'channel_description',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      data['title'] ?? '',
+      data['body'] ?? '',
+      platformChannelSpecifics,
+      payload: data['payload'],
+    );
   }
 
   Future<void> sendMessage(
@@ -208,6 +112,81 @@ class ChatController extends GetxController {
     };
 
     await messageRef.set(messageData);
+
+    // Retrieve the receiver's FCM token
+    final receiverFCMToken = await getReceiverFCMToken(senderId);
+
+    // Send notification to the receiver
+    await sendNotificationToReceiver(
+        receiverFCMToken ?? '', senderId, receiverId, message);
+  }
+
+  Future<String?> getReceiverFCMToken(String receiverUserId) async {
+    final userRef =
+        FirebaseFirestore.instance.collection('users').doc(receiverUserId);
+    final userSnapshot = await userRef.get();
+
+    if (userSnapshot.exists) {
+      // FCM token exists in the database, retrieve and return it
+      return userSnapshot.data()?['fcmToken'];
+    } else {
+      // FCM token doesn't exist in the database, generate a new token and store it
+      final receiverFCMToken = await FirebaseMessaging.instance.getToken();
+
+      if (receiverFCMToken != null) {
+        print("rrrrrrrrreceiverFCMToken");
+        print(receiverFCMToken);
+        // Save the FCM token in the database for future use
+        await userRef.set({'fcmToken': receiverFCMToken});
+      }
+
+      return receiverFCMToken;
+    }
+  }
+
+  Future<void> sendNotificationToReceiver(String receiverFCMToken,
+      String senderId, String receiverId, String message) async {
+    print('receiver token $receiverFCMToken');
+    // Replace 'YOUR_SERVER_KEY' with your FCM server key
+    String serverKey =
+        'AAAA51Dk8wU:APA91bH16JrFM6yg3w014AeQ77SmXCjaTCiT8XlRy3CKPhv79XZx7xVV1_SpzLMsGaG1Zal9Cjr9gBhdMVDwz7Ka4-nnKMRyCLx2hWwoec3VahSQ5aEWxDJkqPbLkebovTWdCgkdSFTB';
+    String url = 'https://fcm.googleapis.com/fcm/send';
+
+    // Replace 'YOUR_NOTIFICATION_TITLE' and 'YOUR_NOTIFICATION_BODY' with your desired notification title and body
+    String notificationTitle = 'New Message $message';
+    String notificationBody = 'You have received a new message from $senderId';
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'key=$serverKey',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'notification': <String, dynamic>{
+            'body': notificationBody,
+            'title': notificationTitle,
+          },
+          'priority': 'high',
+          'data': <String, dynamic>{
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            'senderUserId': senderId,
+            'receiverUserId': receiverId,
+          },
+          'to': receiverFCMToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Notification sent successfully');
+      } else {
+        print(
+            'Failed to send notification. StatusCode: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Failed to send notification. Error: $e');
+    }
   }
 }
 
@@ -269,7 +248,7 @@ class ChatScreen extends StatelessWidget {
                   child: TextField(
                     controller: _messageController,
                     decoration: InputDecoration(
-                      hintText: 'Type your messagee...',
+                      hintText: 'Type your message...',
                     ),
                   ),
                 ),
@@ -291,4 +270,4 @@ class ChatScreen extends StatelessWidget {
     );
   }
 }
-//  RECEIVER_USER_ID   SENDER_USER_ID
+// RECEIVER_USER_ID   SENDER_USER_ID
