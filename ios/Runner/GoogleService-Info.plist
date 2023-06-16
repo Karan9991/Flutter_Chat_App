@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>993494627077-c1n056895e0pt9mtf3dhhmbn9sso4dmd.apps.googleusercontent.com</string>
+	<string>993494627077-1h4bd7n16acvcrvaft0f66se7jpiqbi5.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.993494627077-c1n056895e0pt9mtf3dhhmbn9sso4dmd</string>
+	<string>com.googleusercontent.apps.993494627077-1h4bd7n16acvcrvaft0f66se7jpiqbi5</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>993494627077-lcnrte5q0pb8lm2ig62bq7796cj1ind3.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.chat</string>
+	<string>com.example.chat.ios</string>
 	<key>PROJECT_ID</key>
 	<string>my-project2-1630342752427</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:993494627077:ios:d1a56fdfc8b5a56d9d3d6c</string>
+	<string>1:993494627077:ios:ae8f63e43939efc69d3d6c</string>
 	<key>DATABASE_URL</key>
 	<string>https://my-project2-1630342752427-default-rtdb.firebaseio.com</string>
 </dict>

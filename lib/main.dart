@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chat/chat_screen.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -153,13 +156,48 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // void _configureFCM() {
+  //   _firebaseMessaging.requestPermission();
+
+  //   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  //     print('Foreground notification received: $message');
+
+  //     if (message.notification != null) {
+  //       showNotification(message.notification!);
+  //     } else {
+  //       print('No notification payload found in the message.');
+  //     }
+  //   }, onError: (error) {
+  //     print('Error receiving foreground notification: $error');
+  //   });
+
+  //   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+  //     print('Background notification received: $message');
+
+  //     if (message.notification != null) {
+  //       showNotification(message.notification!);
+  //     } else {
+  //       print('No notification payload found in the message.');
+  //     }
+  //   }, onError: (error) {
+  //     print('Error receiving background notification: $error');
+  //   });
+  // }
+
+//original
   void _configureFCM() {
     _firebaseMessaging.requestPermission();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('fffffffffForeground notification received $message');
+
       if (message.notification != null) {
-         showNotification(message.notification!);
-       // _showLocalNotification(message.data);
+        //  showNotification(message.notification!);
+        showNotification('title', 'body');
+        print('nnnnnnotification data ');
+        print(message.notification?.title);
+        print(message.notification?.body);
+
+        // _showLocalNotification(message.data);
       }
       // Handle foreground notifications here
       // Example: Show a local notification using flutter_local_notifications package
@@ -168,19 +206,18 @@ class _MyHomePageState extends State<MyHomePage> {
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('bbbbbbbbbbbBackground notification received $message');
       if (message.notification != null) {
-        showNotification(message.notification!);
+        // showNotification(message.notification!);
         //_showLocalNotification(message.data);
       }
+
       // Handle background notifications here
     });
   }
 
-  void showNotification(RemoteNotification remoteNotification) async {
-    AndroidNotificationDetails androidPlatformChannelSpecifics =
+  void showNotification(String? title, String? body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      Platform.isAndroid
-          ? 'com.dfa.flutterchatdemo'
-          : 'com.duytq.flutterchatdemo',
+      'com.dfa.flutterchatdemo', // Replace with your Android package name
       'Flutter chat demo',
       playSound: true,
       enableVibration: true,
@@ -189,22 +226,54 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails();
+
     NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
       iOS: iOSPlatformChannelSpecifics,
     );
 
-    print(remoteNotification);
-
     await flutterLocalNotificationsPlugin.show(
       0,
-      remoteNotification.title,
-      remoteNotification.body,
+      title,
+      body,
       platformChannelSpecifics,
       payload: null,
     );
   }
 
+//original
+  // void showNotification(RemoteNotification remoteNotification) async {
+  //   AndroidNotificationDetails androidPlatformChannelSpecifics =
+  //       AndroidNotificationDetails(
+  //     Platform.isAndroid
+  //         ? 'com.dfa.flutterchatdemo'
+  //         : 'com.duytq.flutterchatdemo',
+  //     'Flutter chat demo',
+  //     playSound: true,
+  //     enableVibration: true,
+  //     importance: Importance.max,
+  //     priority: Priority.high,
+  //   );
+
+  //   DarwinNotificationDetails iOSPlatformChannelSpecifics =
+  //       DarwinNotificationDetails();
+  //   NotificationDetails platformChannelSpecifics = NotificationDetails(
+  //     android: androidPlatformChannelSpecifics,
+  //     iOS: iOSPlatformChannelSpecifics,
+  //   );
+
+  //   print(remoteNotification);
+
+  //   await flutterLocalNotificationsPlugin.show(
+  //     0,
+  //     remoteNotification.title,
+  //     remoteNotification.body,
+  //     platformChannelSpecifics,
+  //     payload: null,
+  //   );
+  // }
+
+//original
   void configLocalNotification() {
     AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -217,24 +286,37 @@ class _MyHomePageState extends State<MyHomePage> {
     flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  void _showLocalNotification(Map<String, dynamic> data) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'channel_id',
-      'channel_name',
-      channelDescription: 'channel_description',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+  // void _showLocalNotification(Map<String, dynamic> data) async {
+  //   const AndroidNotificationDetails androidPlatformChannelSpecifics =
+  //       AndroidNotificationDetails(
+  //     'channel_id',
+  //     'channel_name',
+  //     channelDescription: 'channel_description',
+  //     importance: Importance.max,
+  //     priority: Priority.high,
+  //   );
+  //   const NotificationDetails platformChannelSpecifics =
+  //       NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      data['title'] ?? '',
-      data['body'] ?? '',
-      platformChannelSpecifics,
-      payload: data['payload'],
-    );
-  }
+  //   await flutterLocalNotificationsPlugin.show(
+  //     0,
+  //     data['title'] ?? '',
+  //     data['body'] ?? '',
+  //     platformChannelSpecifics,
+  //     payload: data['payload'],
+  //   );
+  // }
+
+  // void showLocalNotification(String title, String body) {
+  //   const androidNotificationDetail = AndroidNotificationDetails(
+  //       '0', // channel Id
+  //       'general' // channel Name
+  //       );
+  //   const iosNotificatonDetail = DarwinNotificationDetails();
+  //   const notificationDetails = NotificationDetails(
+  //     iOS: iosNotificatonDetail,
+  //     android: androidNotificationDetail,
+  //   );
+  //   flutterLocalNotificationsPlugin.show(0, title, body, notificationDetails);
+  // }
 }

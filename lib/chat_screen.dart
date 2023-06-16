@@ -114,7 +114,8 @@ class ChatController extends GetxController {
     await messageRef.set(messageData);
 
     // Retrieve the receiver's FCM token
-    final receiverFCMToken = await getReceiverFCMToken(senderId);
+    //change senderid and receiver id here
+    final receiverFCMToken = await getReceiverFCMToken(receiverId);
 
     // Send notification to the receiver
     await sendNotificationToReceiver(
@@ -248,7 +249,7 @@ class ChatScreen extends StatelessWidget {
                   child: TextField(
                     controller: _messageController,
                     decoration: InputDecoration(
-                      hintText: 'Type your message...',
+                      hintText: 'Type your messagee...',
                     ),
                   ),
                 ),
